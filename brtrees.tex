@@ -1,0 +1,570 @@
+\documentclass[10pt,spanish,twocolumn]{article}
+\usepackage[spanish,activeacute]{babel}
+\usepackage[pdftex]{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{verbatim}
+\usepackage{ifpdf}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{url}
+
+\usepackage[T1]{fontenc}
+\usepackage[scaled=.7]{inconsolata}
+%\renewcommand*\familydefault{\ttdefault}
+
+\lstset{frame=framebox, basicstyle=\ttfamily}
+\setlength{\columnsep}{1cm}
+\ifpdf
+    \DeclareGraphicsRule{*}{mps}{*}{}
+\fi
+
+\title{Algoritmos y Estructuras de Datos sobre Árboles}
+\author{Gerard Lledó Vives}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introducción}
+Es fácil dejarse impresionar por el número de problemas que la teoría de grafos
+puede modelar.  No es casualidad que esta forme parte del conjunto de 
+herramientas fundamentales para todo informático.  A día de hoy, continúan 
+apareciendo estructuras de datos que exprimen las propiedades de grafos o 
+árboles en una nueva dirección.
+
+Este trabajo pretende construir en la base formal de los árboles.  Nuestro 
+objetivo será el de investigar como convertir estos árboles en estructuras de 
+datos eficientes.  Este último adjetivo es clave, ya que una estructura de 
+datos, no sólo almacena datos, sino que les da una forma.  Por esta razón no 
+tiene sentido hablar de estructuras de datos sin algoritmos y es a ellos los 
+que dedicaremos los últimos apartados de este trabajo.
+
+\section{Eficiencia: Que es costoso y que no}
+Como acabamos de ver, identificar que hace una representación o algoritmo más 
+deseable que otro es una de las cuestiones que vamos a intentar abordar en 
+cuanto podamos.  Pero antes, debemos definir a qué nos referimos con 
+\emph{eficiencia}.  En general y de forma abstracta, tomaremos dos medidas como 
+representativas: el tiempo y el consumo de memoria.
+
+\paragraph{Tiempo} A la hora de diseñar un sistema de software, el tiempo puede 
+ser crítico.  Un programa de ajedrez que tarde 30 minutos para realizar una 
+jugada puede ser bastante exasperante.  Un router que retrase 30 milisegundos 
+cada paquete de datos puede ser letal para el disfrute de cualquier juego en 
+red.  En general, cuando hablamos de tiempo, nos referimos al tiempo de 
+ejecución de un algoritmo; por ejemplo, recorrer todos los vértices de un 
+grafo.
+
+\paragraph{Consumo de Memoria} Nuestros ordenadores tienen una cantidad 
+limitada de memoria.  Si nuestro software intenta usar más de la que hay 
+disponible, el sistema operativo se encargara de parar su ejecución sin ningún 
+tipo de remordimiento.  En general, cuando hablamos de consumo de memoria, nos 
+referimos a una representación.
+
+\vspace{4mm}
+Salta a la vista que dado un algoritmo o representación estas medidas no son en 
+general fijas, si no dependientes del tamaño de los parámetros de entrada.  Por 
+ejemplo, el consumo de memoria de la representación de un grafo o el tiempo de 
+ejecución de un algoritmo de búsqueda sera función del número de vértices y 
+aristas.
+
+En teoría de la computación, a la hora de comparar costes, es común ignorar 
+factores y hablar de coste asintótico.  Es decir, si un algoritmo emplea $k$ 
+veces (siendo $k$ constante) más tiempo que otro, los consideraremos 
+asintóticamente equivalentes.  Emplearemos la notación estándar 
+$\mathcal{O}()$.  Por ejemplo:
+
+\begin{itemize}
+    \item $\mathcal{O}(V^2)$: El coste crece de forma cuadrática con el número 
+de vértices.
+    \item $\mathcal{O}(2^V)$: El coste crece de forma exponencial con el número 
+de vértices.
+    \item $\mathcal{O}(1)$: El coste es constante e independiente del tamaño de 
+los parámetros de entrada.
+\end{itemize}
+
+Dicho de otra forma, tomando los ejemplos anteriores, se observa que para una 
+$V$ suficientemente grande, $k_1 < k_2V^2 < k_32^V$ independientemente de los 
+valores de $k_1$, $k_2$ y $k_3$.  Consecuentemente, podemos afirmar que 
+$\mathcal{O}(1) < \mathcal{O}(V^2) < \mathcal{O}(2^V)$.  Además,
+se expresan también dichos costes de forma informal como de carácter
+\emph{constante}, \emph{polinómico} y \emph{exponencial}.
+
+\section{Representación de Árboles con Raíz}
+Todo árbol con raíz (de ahora en adelante, simplemente árbol) es trivialmente 
+un grafo.  No obstante, sus peculiaridades recurrentes nos permiten usar 
+representaciones alternativas (y en general, más adecuadas) a las que se 
+emplean para grafos (véase Cormen~\cite[Ch22.1]{Cormen:01}).
+
+Antes que nada, definimos que dos vértices $v_1$ y $v_2$ están 
+\emph{directamente conectados} si y solo si $d(v_1, v_2) = 1$.  Además, sabemos 
+por definición que en todo árbol, para cada par de vértices existe un
+único camino entre ellos.  Es más, entre un vértice cualquiera $v$ y la raíz 
+del árbol $v_r$, hay un solo camino (puesto que $v_r$ es único).  Definiremos 
+como $P(v)$ o informalmente el \emph{padre} de $v$ a aquel vértice directamente 
+conectado que se acerca a $v_r$.  Dicho de otra forma, $v_p = P(v)$ será aquel 
+vértice tal que $d(v_p, v_r) = d(v, v_r) - 1$.  Por la unicidad del camino se 
+deduce la unicidad de $v_p$.  Además, llamaremos $H_i(v)$ ($i$-ésimos 
+\emph{hijo} de $v$) a aquellos vértices directamente conectados que no son el 
+padre de $v$.  Un último detalle a observar, es que $v_r$ no tiene padre.
+
+La misma observación se puede generalizar en una relación de orden, como se 
+describe en Bujance~\cite[P2-3.21]{Bujance:05}.  Usando la notación descrita en 
+la referencia, podemos afirmar: $P(v) < v$ y $\forall v_h \in H(v), \; v < 
+v_h$.
+
+Con objeto de llegar a una representación lo más sencilla posible, 
+simplificaremos nuestro alcance un paso más, limitando el número de hijos que 
+tendrá nuestro árbol.  Definiremos como \emph{árbol binario} a aquel árbol en 
+que todo vértice tiene un máximo de 2 hijos.  La figura \ref{fig:tree1} muestra 
+nuestro primer ejemplo de árbol plasmado gráficamente.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{trees.1}
+    \caption{Árbol binario}
+    \label{fig:tree1}
+\end{figure}
+
+Nuestro definición de árbol también va a diferenciar entre los dos hijos de un 
+vértice.  Vamos a definir el primero de ellos como $L(v)$, o dicho de otra 
+forma: el que está `a la izquierda'.  Por ejemplo $L(a) = b$.  De forma 
+simétrica se define $R(v)$.
+
+Obsérvese que, recurrentemente, $L(v)$ y $R(v)$ son las raíces de dos 
+subárboles binarios, a los que denotaremos como $AL(v)$ y $AR(v)$ 
+respectivamente.
+
+A continuación, vamos a enriquecer el árbol con información.  Esto es 
+importante, puesto que nuestro objetivo es usar árboles como estructuras de 
+datos, y sin datos solo tenemos parte de lo que buscamos.  Así pues, 
+asignaremos aleatoriamente valor entero $D(v)$ a cada vértice y el resultado se 
+puede ver en la figura \ref{fig:tree2}.  Adviértase que el hecho de guardar 
+enteros es simplemente ilustrativo y el mismo resultado se puede obtener con 
+letras, imágenes o posiciones de un juego de ajedrez.  Esta decisión la debe 
+tomar el usuario de la estructura de datos.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{trees.2}
+    \caption{Árbol binario empleado como estructura de datos}
+    \label{fig:tree2}
+\end{figure}
+
+Por último, para simplificar aún más la manipulación de estos árboles deseamos 
+generalizar todos los vértices para que tengan siempre 2 hijos.  Por supuesto 
+esto es imposible, puesto que todo árbol tiene hojas y las hojas no tienen 
+hijos.  Lo que haremos será definir un vértice especial, al que nos referiremos 
+como nulo.  Es decir, el árbol anterior con terminadores nulos $N$ en las hojas 
+será como el descrito en la figura \ref{fig:tree3}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{trees.3}
+    \caption{Árbol con terminadores nulos}
+    \label{fig:tree3}
+\end{figure}
+
+Por supuesto, el árbol en el sentido estricto de la palabra es el de la figura 
+\ref{fig:tree2}.  Los terminadores son simplemente un artilugio que sera útil a 
+la hora de usar nuestra representación, pero como la transformación de uno a 
+otro es trivial, podemos considerar con el nivel de abstracción adecuado que se 
+tratan del mismo árbol.  En general, no dibujaremos los terminadores, aunque se 
+emplearan en la representación.
+
+Con este limitado concepto de árbol, es fácil llegar a una construcción 
+tipográfica para representar el árbol de la figura anterior.  Todo vértice 
+incluirá información sobre su valor y sus dos hijos.  Es decir, para un vértice 
+$v$: 
+
+$$
+    [D(v) AL(v) AR(v)]
+$$
+
+Empezamos construyendo el árbol más simple posible, como el de la figura 
+\ref{fig:tree4}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{trees.4}
+    \caption{Árbol con un sólo nodo}
+    \label{fig:tree4}
+\end{figure}
+
+Se ve claramente que $AL(v_r) = AR(v_r) = N$.  Este árbol lo representaremos de 
+la siguiente forma.
+
+$$
+    A = [1 N N]
+$$
+
+Obsérvese el uso de $N$ como terminador.  Pasamos a ver el árbol de la figura 
+\ref{fig:tree1}:
+
+$$
+    A = [3 \underbrace{[2 [9 N N] N]}_{AL} \underbrace{[6 N N]}_{AR}]
+$$
+
+La raíz de este árbol tiene dos hijos, cada uno es recursivamente otro árbol, 
+es decir $AL(v_r)$ y $AR(v_r)$.  $AR(v_r)$ es en el fondo la misma estructura 
+que la figura \ref{fig:tree4} con diferente valor asignado.  $AL(v_r)$ es más 
+complejo, pero se puede observar que $AL(AL(v_r))$ tiene la misma estructura 
+que $AR(v_r)$ (un sólo nodo) y $AR(AL(v_r))$ es el terminador $N$.
+
+Esta estructura recursiva simplifica enormemente trabajar sobre árboles.  En 
+general, resulta trivial subdividir el procesamiento del árbol en sus 
+respectivos subárboles.  Lo que esto significa es que todo algoritmo se 
+reducirá a ejecutar cierto procesamiento a un vértice y recursivamente a los 
+subárboles que de el dependen.
+
+Por último indicar que, trivialmente, el coste de memoria de la representación 
+dada para el árbol binario es $\mathcal{O}(V)$.  Compárese con la 
+representación por excelencia de grafos densos: una matriz de adyacencia, cuyo 
+coste es $\mathcal{O}(V^2)$.
+
+\section{Árboles binarios}
+Dada la naturaleza recurrente de los árboles, la implementación de los 
+algoritmos se dará de manera funcional.  La característica más importante es 
+que todos los algoritmos seguirán un esquema de inducción y es posible 
+probarlos, aunque aquí no lo haremos.
+
+Una de las construcciones básicas del lenguaje que emplearemos es el 
+\emph{pattern matching}.  En vez de emplear los operadores $AL$, $AR$, etc.  
+como hemos venido haciendo hasta ahora, nuestro lenguaje de programación va a 
+tratar de encajar `patrones' con nuestra descripción tipográfica.  Un patrón 
+puede ser de dos tipos: constante (representado por letras mayúsculas y 
+números) o variable (representado por letras minúsculas).  En el caso del 
+patrón constante, solo puede encajar con sí mismo.  Si es variable encajará con 
+un valor o con la secuencia más corta de corchetes emparejados.  Veamos un 
+ejemplo:
+
+\begin{lstlisting}
+  [3 N [4 N N]] -> [d l r]
+  d = 3
+  l = N
+  r = [4 N N]
+\end{lstlisting}
+
+En resumidas cuentas, usando el patrón $[d l r]$ sobre el árbol, lo que hacemos 
+es extraer $D(v)$, $AL(v)$ y $AR(v)$ y almacenarlo en las respectivas 
+variables.  De hecho, sabemos que todos los árboles contienen a sus dos hijos 
+por la construcción de los terminadores, pero llegados a las hojas, tendremos 
+que crear un patrón para los terminadores.  Este es el $N$ que se aprecia en el 
+listado anterior.
+
+Obviamente, si le presentamos a $N$ el mismo patrón que hemos usado antes, 
+generaremos un error.  En general, definiremos cada algoritmo de forma que 
+tenga patrones para ambas situaciones.  Obviamente, el patrón que encaja con 
+$N$ es $N$, como veremos más adelante.
+
+Es interesante apuntar que el pseudo-lenguaje que se empleará para la 
+descripción de estos algoritmos es una adaptación Haskell: uno de los lenguajes 
+de programación funcional con más actividad académica.  Se menciona este hecho 
+para destacar que las definiciones que daremos forman parte de un modelo 
+computacional real y aunque remotas para un programador procedural son 
+perfectamente ejecutables sin ninguna modificación en cualquier ordenador.
+
+\subsection{Definiendo algoritmos}
+El proceso de definir algoritmos es parejo al de definir relaciones de 
+recurrencia.  En general, desearemos especificar patrones que sean capaces de 
+aceptar todos los árboles posibles (incluso $N$).  Este es un detalle 
+importante, ya que nosotros no controlaremos que árboles se le presentan a los 
+patrones y lo que antes realizábamos a mano (el encajado de patrones), será 
+ahora trabajo del ordenador.  Nuestro trabajo será proveer indicaciones para 
+que no haya ningún árbol que genere un error de encajado.
+
+\subsection{Algoritmos básicos}
+Definiremos ahora una serie de algoritmos sencillos que nos permitirán 
+manipular árboles.  Estos tendrán un carácter recursivo.  Por ejemplo, 
+calculemos la profundidad del árbol; dicho de otra forma, el camino más largo 
+contenido en el árbol.
+
+\begin{lstlisting}
+prof  N      | 0
+prof [d l r] | 1 + max(prof l, prof r)
+\end{lstlisting}
+
+La profundidad del árbol vacío es cero.  La profundidad de cualquier otro árbol 
+sera uno más el máximo de las profundidades de los hijos.  Otro ejemplo, la 
+suma de todos los valores dentro del árbol:
+
+\begin{lstlisting}
+suma  N      | 0
+suma [d l r] | d + suma l + suma r
+\end{lstlisting}
+
+Para comprobar cómo se comporta un algoritmo para ejemplos simples, la mejor 
+opción es normalmente realizar una \emph{traza}.  Una traza recorre todos los 
+patrones hasta que encaja con uno válido.  Cuando esto ocurre, la expresión se 
+reemplaza con aquella a la derecha del signo $|$.
+
+\begin{lstlisting}
+  suma [3 N [5 N N]]
+\end{lstlisting}
+
+En cada paso substituiremos una llamada a la función \texttt{suma} con una de 
+las partes derechas de la descripción de patrones (el algoritmo).
+
+\begin{lstlisting}
+  suma [3 N [5 N N]]
+  > 3 + suma N + suma [5 N N]   # Patron 2
+  > 3 + 0 + suma [5 N N]        # Patron 1
+  > 3 + 0 + 5 + suma N + suma N # Patron 2
+  > 3 + 0 + 5 + 0 + suma N      # Patron 1
+  > 3 + 0 + 5 + 0 + 0           # Patron 1
+  > 8                      # Simplificando
+\end{lstlisting}
+
+El siguiente algoritmo comprueba si cierto entero $n$ está contenido en el 
+árbol.  Informalmente, el árbol contiene $x$ si el valor del vértice raíz lo 
+contiene o si cualquiera de los subárboles hijos lo contiene.  Apreciese cuanto 
+se acerca esta descripción informal al algoritmo presentado.
+
+\begin{lstlisting}
+search x  N      | False
+search x [d l r] | d = x OR
+                   search x l OR
+                   search x r
+\end{lstlisting}
+
+\section{Árboles binarios de búsqueda}
+Tal y como hemos descrito los árboles binarios, aún tenemos por descubrir 
+alguna característica que los haga deseables.  Es decir, somos capaces de 
+almacenar datos, pero no de una forma más eficiente que una simple lista de 
+enteros.
+
+Para concretar, si tenemos una lista de $n$ elementos, y queremos saber si $x$ 
+se encuentra entre ellos, comprobaremos cada elemento desde el principio hasta 
+el final, hasta que encontremos el nuestro.
+
+Suponemos el peor caso en que $x$ no esta en la lista.  El coste de recorrer la 
+lista es $\mathcal{O}(n)$, puesto que hay que comprobar cada uno de los 
+elementos.  Lo mismo pasa en los árboles binarios descritos hasta ahora, 
+realizando una traza del algoritmo \texttt{search} podemos ver que acabamos 
+realizando una llamada en cada vértice.  Dicho de otra forma, para cada 
+elemento almacenado y por tanto $\mathcal{O}(n)$ también.
+
+\subsection{Invariantes}
+Para definir los árboles binarios de búsqueda (ABB) vamos a emplear los árboles 
+binarios descritos hasta ahora, pero vamos a introducir una \emph{invariante}.  
+La invariante sera la siguiente:
+
+\begin{align*}
+    \forall v \in AL(v_r) \; D(v) < D(v_r)\\
+    \forall v \in AR(v_r) \; D(v) > D(v_r)\\
+\end{align*}
+
+o lo que es lo mismo, todos los valores asociados al subárbol izquierdo son 
+inferiores al valor de la raíz y todos los valores asociados al subárbol 
+derecho son mayores al valor de la raíz.  Obviamente, la figura \ref{fig:tree2} 
+no es un ABB.
+
+Las razones para la elección de tal invariante se verán más tarde en el 
+análisis de costes.
+
+\subsection{Implementado las invariantes}
+Imaginemos que tenemos una lista de números y queremos insertar estos en un 
+ABB.  Necesitamos un algoritmo para crear un árbol vacío, y un algoritmo para 
+insertar valores en este árbol.  Antes de mostrar la implementación mostraremos 
+cómo se usarán estos algoritmos, por ejemplo con la lista $(3, 4, 2)$.  Nuestro 
+ABB se almacenará en $T$.
+
+\begin{lstlisting}
+  T := Empty
+  T := Insert T 3
+  T := Insert T 4
+  T := Insert T 2
+\end{lstlisting}
+
+o escrito de otra forma igualmente válida
+
+\begin{lstlisting}
+  T := Insert (Insert (Empty) 3) 4
+  T := Insert T 2
+\end{lstlisting}
+
+Es decir, \texttt{Empty} nos devolverá un árbol vacío, y cuando llamemos 
+\texttt{Insert} le pasaremos el árbol y el valor que queremos insertar.  El 
+algoritmo nos retornará el árbol con el nuevo valor.  Por supuesto necesitamos 
+reasignar $T$ para conservar esta inserción.  Los algoritmos se describen a 
+continuación:
+
+\begin{lstlisting}
+Empty                      | N
+Insert N x                 | [x N N]
+Insert [d l r] x AND x = d | [d l r]
+Insert [d l r] x AND x < d | [d (Insert l x) r]
+Insert [d l r] x AND x > d | [d l (Insert r x)]
+\end{lstlisting}
+
+La implementación de \texttt{Empty} es trivial, especialmente unida al primer 
+patrón de \texttt{Insert}.  Insertar un número sobre el árbol vacío $N$ nos 
+devuelve $[x N N]$, lo cual ya vimos que es el árbol de un solo nodo (figura 
+\ref{fig:tree4})
+
+En el caso que no tengamos un ABB vacío, el primer patrón comprueba que el 
+valor a insertar no sea exactamente aquel que queremos insertar.  En tal caso 
+desechamos la operación y el ABB que se devuelve es el mismo que se pasó como 
+parámetro.  Si este no es el caso, tenemos dos opciones: descender hacia 
+$AL(v_r)$ o $AR(v_r)$.  Aquí seguimos las reglas del invariante.
+
+En caso que acabemos insertando en el árbol izquierdo, sabemos que tanto $d$ 
+como $r$ se mantendrán iguales y el que será modificado es el sub-árbol 
+izquierdo.  Llamaremos \texttt{Insert} en $l$ y guardaremos el resultado como 
+el nuevo $l$ que devolverá el \texttt{Insert} principal.
+
+Realicemos la traza del ejemplo de antes:
+
+\begin{lstlisting}
+1)T := Empty
+     = N
+2)T := Insert N 3
+     = [3 N N]       # Patron 1
+3)T := Insert [3 N N] 4
+     = [3 N (Insert N 4)]
+     = [3 N [4 N N]]
+4)T := Insert [3 N [4 N N]] 2
+     = [3 (Insert N 2) [4 N N]]
+     = [3 [2 N N] [4 N N]]
+\end{lstlisting}
+
+En efecto, el árbol resultante es un árbol binario de búsqueda pues cumple con 
+la invariante que nos habíamos propuesto.  Aquí está la representación gráfica 
+del mismo:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{trees.6}
+    \caption{Árbol binario de búsqueda}
+    \label{fig:tree3}
+\end{figure}
+
+Implementemos ahora el algoritmo \texttt{Search}.  Obviamente, explotaremos la 
+invariante para reducir el espacio de búsqueda, lo que repercutirá en el coste 
+del algoritmo, como analizaremos más tarde.
+
+\begin{lstlisting}
+Search N x = False
+Search [d l r] x AND x = d | True
+Search [d l r] x AND x < d | Search l x
+Search [d l r] x AND x > d | Search r x
+\end{lstlisting}
+
+El algoritmo no debería ser especialmente difícil llegados a este punto.  $n$ 
+puede estar en el vértice actual o en uno de los subárboles, la diferencia con 
+el árbol binario tradicional es que en un ABB sabemos en cual de los dos 
+subárboles se encuentra.
+
+\subsection{Algoritmo de ordenado}
+Puesto que la invariante ha introducido un orden sobre los datos introducidos, 
+no es difícil implementar un algoritmo que guarde los valores ordenados en una 
+lista dado un ABB.  Para tal fin usamos un nuevo constructor de listas, 
+denotado por los corchetes; el símbolo de suma denotara la concatenación de 
+listas.
+
+\begin{lstlisting}
+Sort N          | []
+Sort [d l r]    | [(Sort l) + d + (Sort r)]
+\end{lstlisting}
+
+\section{Análisis de costes}
+Hemos visto que el algoritmo de búsqueda \texttt{Search} es potencialmente más 
+eficiente que la de un árbol normal.  Esto se debe a que a cada paso, en vez de 
+tratar de recorrer todos los vértices, somos capaces de descartar un buen 
+número de elementos, puesto que la invariante de los ABB nos lo indica.  En 
+este apartado trataremos de justificar que esta mejora es asintóticamente 
+significativa.
+
+Supongamos un árbol binario completo.  Se dirá que un árbol binario es completo 
+cuando todos los vértices (excepto uno) tiene dos hijos.  Se puede construir un 
+ABB con estas características con cualquier lista de números.  Nuestro interés 
+reside en conocer cual será la profundidad de este árbol en relación al número 
+de vértices que contiene, puesto que los algoritmos descritos sólo se ejecutan 
+una vez por cada nivel de profundidad.
+
+El paso más natural es mirar al ejemplo que tenemos entre manos.  Si dividimos 
+los vértices según la distancia a la raíz, observamos que existe 1 con 
+distancia 0, 2 con distancia 1 (los dos hijos de la raíz), 4 con distancia 2, 
+etc.  En efecto, cada nivel del árbol tiene el doble de vértices que el nivel 
+superior, puesto que cada vértice contribuirá dos hijos descendentemente.
+
+$$
+    n = n_p + \displaystyle\sum\limits_{i=0}^{p-1} 2^i
+$$
+
+Donde $p$ es la profundidad máxima y $n_p$ es el número de vértices con 
+profundidad máxima.  Por la formula de la suma parcial de series geométricas 
+(fácilmente comprobable por inducción) sabemos que:
+
+$$
+    \displaystyle\sum\limits_{i=0}^{p-1} = 2^p - 1
+$$
+
+En el peor de los casos, el último nivel (que no está completo) tiene $2^p - 1$
+vértices.  Finalmente calculamos el total y aplicamos logaritmos.  La constante 
+$-1$ la desechamos por ser asintóticamente insignificante:
+
+\begin{align*}
+    n &= 2(2^p)= 2^{p+1}\\
+    log_2 n &= log_2 2^{p+1} = p + 1\\
+    p &= log_2 n - 1
+\end{align*}
+
+Así pues, queda demostrado que la profundidad de un árbol completo $p \in 
+\mathcal{O}(\log_2 n)$.  En consecuencia, los algoritmos descritos para los 
+árboles binarios de búsqueda son también $\mathcal{O}(\log_2 n)$,
+
+Esta demostración, se puede extender a árboles creados con inserciones de 
+elementos aleatorios conservando el mismo coste, aunque no la reproduciremos 
+aquí (véase Cormen~\cite[Ch12.4]{Cormen:01}).
+
+Sobre el algoritmo de ordenado descrito anteriormente podemos afirmar que tiene 
+un coste $\mathcal{O}(n \log n)$.  La razón es que ejecutamos $n$ inserciones 
+con un coste logarítmico y recorrer el árbol tiene un coste comparativamente 
+insignificante, pues es simplemente $\mathcal{O}(n)$.  Y esto no es todo, 
+puesto que $\mathcal{O}(n \log n)$ es el coste asintótico óptimo para 
+algoritmos de ordenación por comparación.  Cormen~\cite[Ch8.1]{Cormen:01} una 
+vez más describe esta desmostración.
+
+\subsection{Casos degenerados}
+A pesar de los resultados del apartado anterior, aún es posible construir casos 
+para los cuales forzamos $p \in \mathcal{O}(n)$.  Insertar valores crecientes 
+en el ABB creará el siguiente tipo de árbol:
+
+$$
+    [1 [2 [3 [4 N N] N] N] N]
+$$
+
+Este árbol no es más que una lista enlazada de objetos y por supuesto, no tiene 
+las características de coste a las cuales habíamos llegado en la sección 
+anterior.  Este es un problema interesante y hay varias maneras de solucionarlo 
+introduciendo invariantes que mantengan el árbol con una forma aceptable.  
+Estos árboles se llaman \emph{balanceados} y una de sus variantes (red-black 
+trees) se describen detalladamente en Cormen~\cite[Ch14]{Cormen:01}.  Otra 
+variante son los árboles AVL; de este último se puede hallar una implementación 
+en Haskell en AVLTree~\cite{Lledo:09:ALVtreeHS}.
+
+\section{Notas}
+
+En la brevedad de este trabajo es difícil describir formalmente un número 
+considerable de algoritmos y variantes de estructuras de datos.  Una vez que el 
+lector asimile estas páginas, se recomienda Cormen~\cite{Cormen:01} para 
+extender sobre estas ideas y formalizar los resultados obtenidos.
+
+Si el interés del lector recae en aplicaciones reales de las estructuras aquí 
+descritas, Bovet~\cite{Bovet:05} describe (tangencialmente) cómo una obra de 
+ingeniería como el kernel de Linux hace uso de estructuras basadas en árboles.  
+Especialmente importantes son los árboles que se emplean en los sistemas de 
+ficheros, que intentan alinear el tamaño de la información almacenada en cada 
+vértice con la de los bloques de acceso óptimos en discos duros.  Estos árboles 
+fueron inicialmente descritos en un artículo de Bayer y McCreight 
+\cite{DBLP:journals/acta/BayerM72}.
+
+Para profundizar en los lenguajes funcionales, O'Sullivan~\cite{OSullivan:08} 
+realiza una presentación de Haskell adecuada para aquellos con cierto 
+conocimiento de lenguajes de programación y de los problemas que surgen al 
+construir sistemas de software de cierto tamaño.
+
+\bibliographystyle{abbrv}
+\bibliography{brtrees-biblio}
+
+\end{document}
