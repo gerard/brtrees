@@ -1,9 +1,10 @@
 Este es un trabajo para Matemática Discreta.  Asignatura del Grado de
 Matemáticas de la UNED.
 
-En cuanto pueda incluiré en la sección Downloads un pdf ya hecho.
+Si lo que quieres es leer el trabajo, lo mejor es descargar una copia ya lista:
+ * https://github.com/downloads/gerard/brtrees/brtrees.pdf
 
-Para compilar, simplemente necesitas ejecutar make, aunque para que funcione
-necesitas tener las dependencias instaladas (este proyecto se realizó en una
-debian squeeze).  Si necesitas ayuda, enviame un privado por github o enviame
-un correo a gerard.lledo@gmail.com
+Si te va la marcha, puedes compilar el proyecto.  Simplemente necesitas
+ejecutar make, aunque para que funcione necesitas tener las dependencias
+instaladas (este proyecto se realizó en una debian squeeze).  Si necesitas
+ayuda, enviame un privado por github o un correo a gerard.lledo@gmail.com
